@@ -85,7 +85,7 @@
 				self.object.onreadystatechange	= new Function;
 
 				// BUGFIX: Annoying <parsererror /> in invalid XML responses
-				if (self.responseXML && self.responseXML.documentElement.tagName == "parsererror")
+				if (self.responseXML && self.responseXML.documentElement && self.responseXML.documentElement.tagName == "parsererror")
 					self.responseXML	= null;
 			}
 
