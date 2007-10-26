@@ -34,20 +34,20 @@
 	cXMLHttpRequest.DONE	= 4;
 
 	// Public Properties
-	cXMLHttpRequest.prototype.readyState		= cXMLHttpRequest.UNSENT;
+	cXMLHttpRequest.prototype.readyState	= cXMLHttpRequest.UNSENT;
 	cXMLHttpRequest.prototype.responseText	= "";
 	cXMLHttpRequest.prototype.responseXML	= null;
-	cXMLHttpRequest.prototype.status			= 0;
-	cXMLHttpRequest.prototype.statusText		= "";
+	cXMLHttpRequest.prototype.status		= 0;
+	cXMLHttpRequest.prototype.statusText	= "";
+
+	// Instance-level Events Handlers
+	cXMLHttpRequest.prototype.onreadystatechange	= null;
 
 	// Class-level Events Handlers
 	cXMLHttpRequest.onreadystatechange	= null;
 	cXMLHttpRequest.onopen				= null;
 	cXMLHttpRequest.onsend				= null;
 	cXMLHttpRequest.onabort				= null;
-
-	// Instance-level Events Handlers
-	cXMLHttpRequest.prototype.onreadystatechange	= null;
 
 	// Public Methods
 	cXMLHttpRequest.prototype.open	= function(sMethod, sUrl, bAsync, sUser, sPassword) {
@@ -59,7 +59,7 @@
 		var self	= this,
 			nState	= this.readyState;
 
-		this.object.onreadystatechange	= function fOnReadyStateChange() {
+		this.object.onreadystatechange	= function() {
 			// Synchronize states
 			fSynchronizeStates(self);
 
@@ -69,7 +69,7 @@
 				self.readyState	= self.constructor.UNSENT;
 
 				//
-				fCleanTransport(self);
+				delete self._aborted;
 
 				// Return now
 				return;
@@ -80,7 +80,7 @@
 				fCleanTransport(self);
 
 				// BUGFIX: IE - cache issue
-				if (!self.object.getResponseHeader("Date") && sMethod == "GET") {
+				if (!self.object.getResponseHeader("Date")) {
 					// Save object to cache
 					self._cached	= self.object;
 
@@ -228,8 +228,6 @@
 		// Delete private properties
 		delete self._cached;
 		delete self._headers;
-		delete self._async;
-		delete self._aborted;
 	}
 
 	// Internet Explorer 5.0 (missing apply)
