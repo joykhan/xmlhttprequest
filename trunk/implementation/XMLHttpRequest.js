@@ -61,13 +61,9 @@
 		var self	= this,
 			nState	= this.readyState;
 
-		this.object.onreadystatechange	= function() {
+		this.object.onreadystatechange	= function fOnReadyStateChange() {
 			// Synchronize states
-					self.readyState		= self.object.readyState;
-			try {	self.responseText	= self.object.responseText;	} catch (e) {}
-			try {	self.responseXML	= self.object.responseXML;	} catch (e) {}
-			try {	self.status			= self.object.status;		} catch (e) {}
-			try {	self.statusText		= self.object.statusText;	} catch (e) {}
+			fSynchronizeStates(self);
 
 			// BUGFIX: Firefox fires unneccesary DONE when aborting
 			if (self.aborted) {
@@ -76,20 +72,64 @@
 				return;
 			}
 
-			// BUGFIX: Internet Explorer cache issue
-			// TODO
-
-			//
 			if (self.readyState == self.constructor.DONE) {
-				// BUGFIX: Remove onreadystatechange (Internet Explorer memory leak)
-				self.object.onreadystatechange	= new Function;
+				// Clean Object
+				fCleanTransport(self);
 
-				// BUGFIX: Annoying <parsererror /> in invalid XML responses
-				if (self.responseXML && self.responseXML.documentElement && self.responseXML.documentElement.tagName == "parsererror")
-					self.responseXML	= null;
+				// BUGFIX: IE - cache issue
+				if (!self.object.getResponseHeader("Date") && sMethod == "GET") {
+					// Save object to cache
+					self.cached	= self.object;
+
+					// Instantiate a new transport object
+					XMLHttpRequest.call(self);
+
+					// Re-send request
+					self.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+					self.object.setRequestHeader("If-Modified-Since", self.cached.getResponseHeader("Last-Modified") || new Date(0));
+					// Copy headers set
+					if (self.headers)
+						for (var sHeader in self.headers)
+							if (typeof self.headers[sHeader] == "string")	// Some frameworks prototype objects with functions
+								self.object.setRequestHeader(sHeader, self.headers[sHeader]);
+					self.object.onreadystatechange	= function() {
+						// Synchronize states
+						fSynchronizeStates(self);
+
+						if (self.readyState == self.constructor.DONE) {
+							//
+							if (self.status == 304) {
+								// request = cached
+								self.responseText	= self.cached.responseText;
+								self.responseXML	= self.cached.responseXML;
+							}
+
+							// Clean Object
+							fCleanTransport(self);
+
+							// BUGFIX: IE - Empty documents in invalid XML responses
+							if (self.responseXML)
+								if (self.responseXML.parseError != 0)
+									self.responseXML	= null;
+
+							//
+							fReadyStateChange(self);
+						}
+					};
+					self.object.send(null);
+
+					// Return now - wait untill re-sent request is finished
+					return;
+				}
+
+				// BUGFIX: Gecko - Annoying <parsererror /> in invalid XML responses
+				// BUGFIX: IE - Empty documents in invalid XML responses
+				if (self.responseXML)
+					if (self.responseXML.parseError != 0 || (self.responseXML.documentElement && self.responseXML.documentElement.tagName == "parsererror"))
+						self.responseXML	= null;
 			}
 
-			// BUGFIX: Gecko misses readystatechange calls in synchronous requests (this is executed when firebug is enabled)
+			// BUGFIX: Gecko - missing readystatechange calls in synchronous requests (this is executed when firebug is enabled)
 			if (!self.async && self.constructor.wrapped) {
 				self.readyState	= self.constructor.OPEN;
 				while (++self.readyState < self.constructor.DONE)
@@ -108,7 +148,7 @@
 
 		this.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
 
-		// BUGFIX: Gecko misses readystatechange calls in synchronous requests
+		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
 		if (!this.async && window.navigator.userAgent.match(/Gecko\//)) {
 			this.readyState	= this.constructor.OPEN;
 
@@ -122,7 +162,7 @@
 
 		this.object.send(vData);
 
-		// BUGFIX: Gecko misses readystatechange events
+		// BUGFIX: Gecko - missing readystatechange events
 		if (!this.async && !this.constructor.wrapped) {
 			while (this.readyState++ < this.constructor.DONE)
 				fReadyStateChange(this);
@@ -133,7 +173,7 @@
 		if (this.constructor.onabort)
 			this.constructor.onabort.apply(this, arguments);
 
-		// BUGFIX: Firefox fires unneccesary DONE when aborting
+		// BUGFIX: Gecko - unneccesary DONE when aborting
 		if (this.readyState > this.constructor.UNSENT)
 			this.aborted	= true;
 
@@ -146,6 +186,11 @@
 		return this.object.getResponseHeader(sName);
 	};
 	XMLHttpRequest.prototype.setRequestHeader	= function(sName, sValue) {
+		// BUGFIX: IE - caceh issue
+		if (!this.headers)
+			this.headers	= {};
+		this.headers[sName]	= sValue;
+
 		return this.object.setRequestHeader(sName, sValue);
 	};
 	XMLHttpRequest.prototype.toString	= function() {
@@ -164,6 +209,20 @@
 		// Sniffing code
 		if (self.constructor.onreadystatechange)
 			self.constructor.onreadystatechange.apply(self);
+	}
+
+	function fSynchronizeStates(self) {
+				self.readyState		= self.object.readyState;
+		try {	self.responseText	= self.object.responseText;	} catch (e) {}
+		try {	self.responseXML	= self.object.responseXML;	} catch (e) {}
+		try {	self.status			= self.object.status;		} catch (e) {}
+		try {	self.statusText		= self.object.statusText;	} catch (e) {}
+	}
+
+	function fCleanTransport(self) {
+		self.object.onreadystatechange	= new Function;
+		delete self.cached;
+		delete self.headers;
 	}
 
 	// Internet Explorer 5.0 (missing apply)
