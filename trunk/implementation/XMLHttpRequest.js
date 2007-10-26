@@ -68,9 +68,6 @@
 				// Reset readyState to UNSENT
 				self.readyState	= self.constructor.UNSENT;
 
-				//
-				delete self._aborted;
-
 				// Return now
 				return;
 			}
@@ -100,23 +97,34 @@
 						fSynchronizeStates(self);
 
 						if (self.readyState == self.constructor.DONE) {
-							//
-							if (self.status == 304) {
-								// request = cached
-								self.responseText	= self._cached.responseText;
-								self.responseXML	= self._cached.responseXML;
+							if (self._aborted) {
+								self.readyState	= self.constructor.UNSENT;
+
+								self.responseText	= "";
+								self.responseXML	= null;
+
+								// Return
+								return;
+							}
+							else {
+								//
+								if (self.status == 304) {
+									// request = cached
+									self.responseText	= self._cached.responseText;
+									self.responseXML	= self._cached.responseXML;
+								}
+
+								// BUGFIX: IE - Empty documents in invalid XML responses
+								if (self.responseXML)
+									if (self.responseXML.parseError != 0)
+										self.responseXML	= null;
+
+								//
+								fReadyStateChange(self);
 							}
 
 							// Clean Object
 							fCleanTransport(self);
-
-							// BUGFIX: IE - Empty documents in invalid XML responses
-							if (self.responseXML)
-								if (self.responseXML.parseError != 0)
-									self.responseXML	= null;
-
-							//
-							fReadyStateChange(self);
 						}
 					};
 					self.object.send(null);
@@ -152,7 +160,7 @@
 		this.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
-		if (!this._async && window.navigator.userAgent.match(/Gecko\//)) {
+		if (!bAsync && window.navigator.userAgent.match(/Gecko\//)) {
 			this.readyState	= this.constructor.OPEN;
 
 			fReadyStateChange(this);
