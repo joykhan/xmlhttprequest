@@ -20,7 +20,7 @@
 	// Constructor
 	function cXMLHttpRequest() {
 		this.object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject('Microsoft.XMLHTTP');
-	}
+	};
 
 	// BUGFIX: Firefox with Firebug installed would break pages if not executed
 	if (oXMLHttpRequest && oXMLHttpRequest.wrapped)
@@ -86,7 +86,7 @@
 
 					// Re-send request
 					self.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
-					self.object.setRequestHeader("If-Modified-Since", self._cached.getResponseHeader("Last-Modified") || new Date(0));
+					self.object.setRequestHeader("If-Modified-Since", self._cached.getResponseHeader("Last-Modified") || new window.Date(0));
 					// Copy headers set
 					if (self._headers)
 						for (var sHeader in self._headers)
@@ -204,10 +204,10 @@
 		return this.object.setRequestHeader(sName, sValue);
 	};
 	cXMLHttpRequest.prototype.toString	= function() {
-		return "[object XMLHttpRequest]";
+		return '[' + "object" + ' ' + "XMLHttpRequest" + ']';
 	};
 	cXMLHttpRequest.toString	= function() {
-		return "[XMLHttpRequest]";
+		return '[' + "XMLHttpRequest" + ']';
 	};
 
 	// Helper function
@@ -219,7 +219,7 @@
 		// Sniffing code
 		if (self.constructor.onreadystatechange)
 			self.constructor.onreadystatechange.apply(self);
-	}
+	};
 
 	function fSynchronizeStates(self) {
 				self.readyState		= self.object.readyState;
@@ -227,27 +227,27 @@
 		try {	self.responseXML	= self.object.responseXML;	} catch (e) {}
 		try {	self.status			= self.object.status;		} catch (e) {}
 		try {	self.statusText		= self.object.statusText;	} catch (e) {}
-	}
+	};
 
 	function fCleanTransport(self) {
 		// BUGFIX: IE - memory leak
-		self.object.onreadystatechange	= new Function;
+		self.object.onreadystatechange	= new window.Function;
 
 		// Delete private properties
 		delete self._cached;
 		delete self._headers;
-	}
+	};
 
 	// Internet Explorer 5.0 (missing apply)
-	if (!Function.prototype.apply) {
-		Function.prototype.apply	= function(self, oArguments) {
+	if (!window.Function.prototype.apply) {
+		window.Function.prototype.apply	= function(self, oArguments) {
 			if (!oArguments)
 				oArguments	= [];
 			self.__func	= this;
 			self.__func(oArguments[0], oArguments[1], oArguments[2], oArguments[3], oArguments[4]);
 			delete self.__func;
 		};
-	}
+	};
 
 	// Register new object with window
 	window.XMLHttpRequest	= cXMLHttpRequest;
