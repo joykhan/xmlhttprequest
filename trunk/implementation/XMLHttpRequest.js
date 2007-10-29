@@ -56,78 +56,78 @@
 		this._async		= bAsync;
 
 		// Set the onreadystatechange handler
-		var self	= this,
+		var oRequest	= this,
 			nState	= this.readyState;
 
 		this.object.onreadystatechange	= function() {
 			// Synchronize states
-			fSynchronizeStates(self);
+			fSynchronizeStates(oRequest);
 
 			// BUGFIX: Firefox fires unneccesary DONE when aborting
-			if (self._aborted) {
+			if (oRequest._aborted) {
 				// Reset readyState to UNSENT
-				self.readyState	= self.constructor.UNSENT;
+				oRequest.readyState	= oRequest.constructor.UNSENT;
 
 				// Return now
 				return;
 			}
 
-			if (self.readyState == self.constructor.DONE) {
+			if (oRequest.readyState == oRequest.constructor.DONE) {
 				//
-				fCleanTransport(self);
+				fCleanTransport(oRequest);
 
 				// BUGFIX: IE - cache issue
-				if (!self.object.getResponseHeader("Date")) {
+				if (!oRequest.object.getResponseHeader("Date")) {
 					// Save object to cache
-					self._cached	= self.object;
+					oRequest._cached	= oRequest.object;
 
 					// Instantiate a new transport object
-					self.constructor.call(self);
+					oRequest.constructor.call(oRequest);
 
 					// Re-send request
-					self.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
-					self.object.setRequestHeader("If-Modified-Since", self._cached.getResponseHeader("Last-Modified") || new window.Date(0));
+					oRequest.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+					oRequest.object.setRequestHeader("If-Modified-Since", oRequest._cached.getResponseHeader("Last-Modified") || new window.Date(0));
 					// Copy headers set
-					if (self._headers)
-						for (var sHeader in self._headers)
-							if (typeof self._headers[sHeader] == "string")	// Some frameworks prototype objects with functions
-								self.object.setRequestHeader(sHeader, self._headers[sHeader]);
-					self.object.onreadystatechange	= function() {
+					if (oRequest._headers)
+						for (var sHeader in oRequest._headers)
+							if (typeof oRequest._headers[sHeader] == "string")	// Some frameworks prototype objects with functions
+								oRequest.object.setRequestHeader(sHeader, oRequest._headers[sHeader]);
+					oRequest.object.onreadystatechange	= function() {
 						// Synchronize states
-						fSynchronizeStates(self);
+						fSynchronizeStates(oRequest);
 
-						if (self.readyState == self.constructor.DONE) {
-							if (self._aborted) {
-								self.readyState	= self.constructor.UNSENT;
+						if (oRequest.readyState == oRequest.constructor.DONE) {
+							if (oRequest._aborted) {
+								oRequest.readyState	= oRequest.constructor.UNSENT;
 
-								self.responseText	= "";
-								self.responseXML	= null;
+								oRequest.responseText	= "";
+								oRequest.responseXML	= null;
 
 								// Return
 								return;
 							}
 							else {
 								//
-								if (self.status == 304) {
+								if (oRequest.status == 304) {
 									// request = cached
-									self.responseText	= self._cached.responseText;
-									self.responseXML	= self._cached.responseXML;
+									oRequest.responseText	= oRequest._cached.responseText;
+									oRequest.responseXML	= oRequest._cached.responseXML;
 								}
 
 								// BUGFIX: IE - Empty documents in invalid XML responses
-								if (self.responseXML)
-									if (self.responseXML.parseError != 0)
-										self.responseXML	= null;
+								if (oRequest.responseXML)
+									if (oRequest.responseXML.parseError != 0)
+										oRequest.responseXML	= null;
 
 								//
-								fReadyStateChange(self);
+								fReadyStateChange(oRequest);
 							}
 
 							// Clean Object
-							fCleanTransport(self);
+							fCleanTransport(oRequest);
 						}
 					};
-					self.object.send(null);
+					oRequest.object.send(null);
 
 					// Return now - wait untill re-sent request is finished
 					return;
@@ -135,24 +135,24 @@
 
 				// BUGFIX: Gecko - Annoying <parsererror /> in invalid XML responses
 				// BUGFIX: IE - Empty documents in invalid XML responses
-				if (self.responseXML)
-					if (("parseError" in self.responseXML && self.responseXML.parseError != 0) || (self.responseXML.documentElement && self.responseXML.documentElement.tagName == "parsererror"))
-						self.responseXML	= null;
+				if (oRequest.responseXML)
+					if (("parseError" in oRequest.responseXML && oRequest.responseXML.parseError != 0) || (oRequest.responseXML.documentElement && oRequest.responseXML.documentElement.tagName == "parsererror"))
+						oRequest.responseXML	= null;
 			}
 
 			// BUGFIX: Gecko - missing readystatechange calls in synchronous requests (this is executed when firebug is enabled)
-			if (!self._async && self.constructor.wrapped) {
-				self.readyState	= self.constructor.OPEN;
-				while (++self.readyState < self.constructor.DONE)
-					fReadyStateChange(self);
+			if (!oRequest._async && oRequest.constructor.wrapped) {
+				oRequest.readyState	= oRequest.constructor.OPEN;
+				while (++oRequest.readyState < oRequest.constructor.DONE)
+					fReadyStateChange(oRequest);
 			}
 
 			// BUGFIX: Some browsers (Internet Explorer, Gecko) fire OPEN readystate twice
-			if (nState != self.readyState)
-				fReadyStateChange(self);
+			if (nState != oRequest.readyState)
+				fReadyStateChange(oRequest);
 
-			nState	= self.readyState;
-		}
+			nState	= oRequest.readyState;
+		};
 		// Add method sniffer
 		if (this.constructor.onopen)
 			this.constructor.onopen.apply(this, arguments);
@@ -160,7 +160,7 @@
 		this.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
-		if (!bAsync && window.navigator.userAgent.match(/Gecko\//)) {
+		if (!bAsync && window.navigator.userAgent.match('Gecko/')) {
 			this.readyState	= this.constructor.OPEN;
 
 			fReadyStateChange(this);
@@ -211,41 +211,41 @@
 	};
 
 	// Helper function
-	function fReadyStateChange(self) {
+	function fReadyStateChange(oRequest) {
 		// Execute onreadystatechange
-		if (self.onreadystatechange)
-			self.onreadystatechange.apply(self);
+		if (oRequest.onreadystatechange)
+			oRequest.onreadystatechange.apply(oRequest);
 
 		// Sniffing code
-		if (self.constructor.onreadystatechange)
-			self.constructor.onreadystatechange.apply(self);
+		if (oRequest.constructor.onreadystatechange)
+			oRequest.constructor.onreadystatechange.apply(oRequest);
 	};
 
-	function fSynchronizeStates(self) {
-				self.readyState		= self.object.readyState;
-		try {	self.responseText	= self.object.responseText;	} catch (e) {}
-		try {	self.responseXML	= self.object.responseXML;	} catch (e) {}
-		try {	self.status			= self.object.status;		} catch (e) {}
-		try {	self.statusText		= self.object.statusText;	} catch (e) {}
+	function fSynchronizeStates(oRequest) {
+				oRequest.readyState		= oRequest.object.readyState;
+		try {	oRequest.responseText	= oRequest.object.responseText;	} catch (e) {}
+		try {	oRequest.responseXML	= oRequest.object.responseXML;	} catch (e) {}
+		try {	oRequest.status			= oRequest.object.status;		} catch (e) {}
+		try {	oRequest.statusText		= oRequest.object.statusText;	} catch (e) {}
 	};
 
-	function fCleanTransport(self) {
+	function fCleanTransport(oRequest) {
 		// BUGFIX: IE - memory leak
-		self.object.onreadystatechange	= new window.Function;
+		oRequest.object.onreadystatechange	= new window.Function;
 
 		// Delete private properties
-		delete self._cached;
-		delete self._headers;
+		delete oRequest._cached;
+		delete oRequest._headers;
 	};
 
 	// Internet Explorer 5.0 (missing apply)
 	if (!window.Function.prototype.apply) {
-		window.Function.prototype.apply	= function(self, oArguments) {
+		window.Function.prototype.apply	= function(oRequest, oArguments) {
 			if (!oArguments)
 				oArguments	= [];
-			self.__func	= this;
-			self.__func(oArguments[0], oArguments[1], oArguments[2], oArguments[3], oArguments[4]);
-			delete self.__func;
+			oRequest.__func	= this;
+			oRequest.__func(oArguments[0], oArguments[1], oArguments[2], oArguments[3], oArguments[4]);
+			delete oRequest.__func;
 		};
 	};
 
