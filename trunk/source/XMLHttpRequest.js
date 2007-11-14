@@ -17,13 +17,17 @@
 	// Save reference to earlier defined object implementation (if any)
 	var oXMLHttpRequest	= window.XMLHttpRequest;
 
+	// Define on browser type
+	var bGecko	= window.controllers ? true : false;
+	var bFireBug= bGecko && oXMLHttpRequest.wrapped;
+
 	// Constructor
 	function cXMLHttpRequest() {
 		this.object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject('Microsoft.XMLHTTP');
 	};
 
 	// BUGFIX: Firefox with Firebug installed would break pages if not executed
-	if (oXMLHttpRequest && oXMLHttpRequest.wrapped)
+	if (bFireBug)
 		cXMLHttpRequest.wrapped	= oXMLHttpRequest.wrapped;
 
 	// Constants
@@ -92,6 +96,7 @@
 						for (var sHeader in oRequest._headers)
 							if (typeof oRequest._headers[sHeader] == "string")	// Some frameworks prototype objects with functions
 								oRequest.object.setRequestHeader(sHeader, oRequest._headers[sHeader]);
+
 					oRequest.object.onreadystatechange	= function() {
 						// Synchronize states
 						fSynchronizeStates(oRequest);
@@ -141,7 +146,7 @@
 			}
 
 			// BUGFIX: Gecko - missing readystatechange calls in synchronous requests (this is executed when firebug is enabled)
-			if (!oRequest._async && oRequest.constructor.wrapped) {
+			if (!oRequest._async && bFireBug) {
 				oRequest.readyState	= oRequest.constructor.OPEN;
 				while (++oRequest.readyState < oRequest.constructor.DONE)
 					fReadyStateChange(oRequest);
@@ -160,7 +165,7 @@
 		this.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
-		if (!bAsync && window.navigator.userAgent.match('Gecko/')) {
+		if (!bAsync && bGecko) {
 			this.readyState	= this.constructor.OPEN;
 
 			fReadyStateChange(this);
@@ -174,7 +179,7 @@
 		this.object.send(vData);
 
 		// BUGFIX: Gecko - missing readystatechange events
-		if (!this._async && !this.constructor.wrapped)
+		if (!this._async && !bFireBug)
 			while (this.readyState++ < this.constructor.DONE)
 				fReadyStateChange(this);
 	};
