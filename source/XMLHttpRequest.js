@@ -19,7 +19,7 @@
 
 	// Define on browser type
 	var bGecko	= !!window.controllers,
-		bIE		= document.all && !navigator.userAgent.match(/opera/i),
+		bIE		= window.document.all && !window.navigator.userAgent.match(/opera/i),
 		bFireBug= bGecko && oXMLHttpRequest.wrapped;
 
 	// Constructor
@@ -68,7 +68,7 @@
 		// BUGFIX: IE - memory leak on page unload
 		if (bIE) {
 			var fOnUnload	= function() {
-				if (oRequest._object.readyState != 4)
+				if (oRequest._object.readyState != cXMLHttpRequest.DONE)
 					fCleanTransport(oRequest);
 			};
 			window.attachEvent("onunload", fOnUnload);
@@ -81,13 +81,13 @@
 			// BUGFIX: Firefox fires unneccesary DONE when aborting
 			if (oRequest._aborted) {
 				// Reset readyState to UNSENT
-				oRequest.readyState	= oRequest.constructor.UNSENT;
+				oRequest.readyState	= cXMLHttpRequest.UNSENT;
 
 				// Return now
 				return;
 			}
 
-			if (oRequest.readyState == oRequest.constructor.DONE) {
+			if (oRequest.readyState == cXMLHttpRequest.DONE) {
 				//
 				fCleanTransport(oRequest);
 
@@ -97,7 +97,7 @@
 					oRequest._cached	= oRequest._object;
 
 					// Instantiate a new transport object
-					oRequest.constructor.call(oRequest);
+					cXMLHttpRequest.call(oRequest);
 
 					// Re-send request
 					oRequest._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
@@ -112,9 +112,9 @@
 						// Synchronize states
 						fSynchronizeStates(oRequest);
 
-						if (oRequest.readyState == oRequest.constructor.DONE) {
+						if (oRequest.readyState == cXMLHttpRequest.DONE) {
 							if (oRequest._aborted) {
-								oRequest.readyState	= oRequest.constructor.UNSENT;
+								oRequest.readyState	= cXMLHttpRequest.UNSENT;
 
 								oRequest.responseText	= "";
 								oRequest.responseXML	= null;
@@ -166,8 +166,8 @@
 
 			// BUGFIX: Gecko - missing readystatechange calls in synchronous requests (this is executed when firebug is enabled)
 			if (!oRequest._async && bFireBug) {
-				oRequest.readyState	= oRequest.constructor.OPEN;
-				while (++oRequest.readyState < oRequest.constructor.DONE)
+				oRequest.readyState	= cXMLHttpRequest.OPEN;
+				while (++oRequest.readyState < cXMLHttpRequest.DONE)
 					fReadyStateChange(oRequest);
 			}
 
@@ -178,37 +178,37 @@
 			nState	= oRequest.readyState;
 		};
 		// Add method sniffer
-		if (this.constructor.onopen)
-			this.constructor.onopen.apply(this, arguments);
+		if (cXMLHttpRequest.onopen)
+			cXMLHttpRequest.onopen.apply(this, arguments);
 
 		this._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
 		if (!bAsync && bGecko) {
-			this.readyState	= this.constructor.OPEN;
+			this.readyState	= cXMLHttpRequest.OPEN;
 
 			fReadyStateChange(this);
 		}
 	};
 	cXMLHttpRequest.prototype.send	= function(vData) {
 		// Add method sniffer
-		if (this.constructor.onsend)
-			this.constructor.onsend.apply(this, arguments);
+		if (cXMLHttpRequest.onsend)
+			cXMLHttpRequest.onsend.apply(this, arguments);
 
 		this._object.send(vData);
 
 		// BUGFIX: Gecko - missing readystatechange events
 		if (!this._async && !bFireBug)
-			while (this.readyState++ < this.constructor.DONE)
+			while (this.readyState++ < cXMLHttpRequest.DONE)
 				fReadyStateChange(this);
 	};
 	cXMLHttpRequest.prototype.abort	= function() {
 		// Add method sniffer
-		if (this.constructor.onabort)
-			this.constructor.onabort.apply(this, arguments);
+		if (cXMLHttpRequest.onabort)
+			cXMLHttpRequest.onabort.apply(this, arguments);
 
 		// BUGFIX: Gecko - unneccesary DONE when aborting
-		if (this.readyState > this.constructor.UNSENT)
+		if (this.readyState > cXMLHttpRequest.UNSENT)
 			this._aborted	= true;
 
 		this._object.abort();
@@ -244,8 +244,8 @@
 			oRequest.onreadystatechange.apply(oRequest);
 
 		// Sniffing code
-		if (oRequest.constructor.onreadystatechange)
-			oRequest.constructor.onreadystatechange.apply(oRequest);
+		if (cXMLHttpRequest.onreadystatechange)
+			cXMLHttpRequest.onreadystatechange.apply(oRequest);
 	};
 
 	function fSynchronizeStates(oRequest) {
