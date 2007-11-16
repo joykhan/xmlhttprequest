@@ -91,10 +91,6 @@
 				//
 				fCleanTransport(oRequest);
 
-				// BUGFIX: IE - memory leak in interrupted
-				if (bIE)
-					window.detachEvent("onunload", fOnUnload);
-
 				// BUGFIX: IE - cache issue
 				if (!oRequest._object.getResponseHeader("Date")) {
 					// Save object to cache
@@ -145,6 +141,10 @@
 
 							// Clean Object
 							fCleanTransport(oRequest);
+
+							// BUGFIX: IE - memory leak in interrupted
+							if (bIE)
+								window.detachEvent("onunload", fOnUnload);
 						}
 					};
 					oRequest._object.send(null);
@@ -158,6 +158,10 @@
 				if (oRequest.responseXML)
 					if (("parseError" in oRequest.responseXML && oRequest.responseXML.parseError != 0) || (oRequest.responseXML.documentElement && oRequest.responseXML.documentElement.tagName == "parsererror"))
 						oRequest.responseXML	= null;
+
+				// BUGFIX: IE - memory leak in interrupted
+				if (bIE)
+					window.detachEvent("onunload", fOnUnload);
 			}
 
 			// BUGFIX: Gecko - missing readystatechange calls in synchronous requests (this is executed when firebug is enabled)
