@@ -71,7 +71,8 @@
 				if (oRequest._object.readyState != cXMLHttpRequest.DONE)
 					fCleanTransport(oRequest);
 			};
-			window.attachEvent("onunload", fOnUnload);
+			if (bAsync)
+				window.attachEvent("onunload", fOnUnload);
 		}
 
 		this._object.onreadystatechange	= function() {
@@ -143,7 +144,7 @@
 							fCleanTransport(oRequest);
 
 							// BUGFIX: IE - memory leak in interrupted
-							if (bIE)
+							if (bIE && bAsync)
 								window.detachEvent("onunload", fOnUnload);
 						}
 					};
@@ -160,7 +161,7 @@
 						oRequest.responseXML	= null;
 
 				// BUGFIX: IE - memory leak in interrupted
-				if (bIE)
+				if (bIE && bAsync)
 					window.detachEvent("onunload", fOnUnload);
 			}
 
