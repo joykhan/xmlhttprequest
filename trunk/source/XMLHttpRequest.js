@@ -18,12 +18,13 @@
 	var oXMLHttpRequest	= window.XMLHttpRequest;
 
 	// Define on browser type
-	var bGecko	= window.controllers ? true : false;
-	var bFireBug= bGecko && oXMLHttpRequest.wrapped;
+	var bGecko	= !!window.controllers,
+		bIE		= document.all && !navigator.userAgent.match(/opera/i),
+		bFireBug= bGecko && oXMLHttpRequest.wrapped;
 
 	// Constructor
 	function cXMLHttpRequest() {
-		this.object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject('Microsoft.XMLHTTP');
+		this._object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject('Microsoft.XMLHTTP');
 	};
 
 	// BUGFIX: Firefox with Firebug installed would break pages if not executed
@@ -61,9 +62,19 @@
 
 		// Set the onreadystatechange handler
 		var oRequest	= this,
-			nState	= this.readyState;
+			nState		= this.readyState;
 
-		this.object.onreadystatechange	= function() {
+
+		// BUGFIX: IE - memory leak on page unload
+		if (bIE) {
+			var fOnUnload	= function() {
+				if (oRequest._object.readyState != 4)
+					fCleanTransport(oRequest);
+			};
+			window.attachEvent("onunload", fOnUnload);
+		}
+
+		this._object.onreadystatechange	= function() {
 			// Synchronize states
 			fSynchronizeStates(oRequest);
 
@@ -80,24 +91,28 @@
 				//
 				fCleanTransport(oRequest);
 
+				// BUGFIX: IE - memory leak in interrupted
+				if (bIE)
+					window.detachEvent("onunload", fOnUnload);
+
 				// BUGFIX: IE - cache issue
-				if (!oRequest.object.getResponseHeader("Date")) {
+				if (!oRequest._object.getResponseHeader("Date")) {
 					// Save object to cache
-					oRequest._cached	= oRequest.object;
+					oRequest._cached	= oRequest._object;
 
 					// Instantiate a new transport object
 					oRequest.constructor.call(oRequest);
 
 					// Re-send request
-					oRequest.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
-					oRequest.object.setRequestHeader("If-Modified-Since", oRequest._cached.getResponseHeader("Last-Modified") || new window.Date(0));
+					oRequest._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+					oRequest._object.setRequestHeader("If-Modified-Since", oRequest._cached.getResponseHeader("Last-Modified") || new window.Date(0));
 					// Copy headers set
 					if (oRequest._headers)
 						for (var sHeader in oRequest._headers)
 							if (typeof oRequest._headers[sHeader] == "string")	// Some frameworks prototype objects with functions
-								oRequest.object.setRequestHeader(sHeader, oRequest._headers[sHeader]);
+								oRequest._object.setRequestHeader(sHeader, oRequest._headers[sHeader]);
 
-					oRequest.object.onreadystatechange	= function() {
+					oRequest._object.onreadystatechange	= function() {
 						// Synchronize states
 						fSynchronizeStates(oRequest);
 
@@ -132,7 +147,7 @@
 							fCleanTransport(oRequest);
 						}
 					};
-					oRequest.object.send(null);
+					oRequest._object.send(null);
 
 					// Return now - wait untill re-sent request is finished
 					return;
@@ -162,7 +177,7 @@
 		if (this.constructor.onopen)
 			this.constructor.onopen.apply(this, arguments);
 
-		this.object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+		this._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
 		if (!bAsync && bGecko) {
@@ -176,7 +191,7 @@
 		if (this.constructor.onsend)
 			this.constructor.onsend.apply(this, arguments);
 
-		this.object.send(vData);
+		this._object.send(vData);
 
 		// BUGFIX: Gecko - missing readystatechange events
 		if (!this._async && !bFireBug)
@@ -192,13 +207,16 @@
 		if (this.readyState > this.constructor.UNSENT)
 			this._aborted	= true;
 
-		this.object.abort();
+		this._object.abort();
+
+		// BUGFIX: IE - memory leak
+		fCleanTransport(this);
 	};
 	cXMLHttpRequest.prototype.getAllResponseHeaders	= function() {
-		return this.object.getAllResponseHeaders();
+		return this._object.getAllResponseHeaders();
 	};
 	cXMLHttpRequest.prototype.getResponseHeader	= function(sName) {
-		return this.object.getResponseHeader(sName);
+		return this._object.getResponseHeader(sName);
 	};
 	cXMLHttpRequest.prototype.setRequestHeader	= function(sName, sValue) {
 		// BUGFIX: IE - cache issue
@@ -206,7 +224,7 @@
 			this._headers	= {};
 		this._headers[sName]	= sValue;
 
-		return this.object.setRequestHeader(sName, sValue);
+		return this._object.setRequestHeader(sName, sValue);
 	};
 	cXMLHttpRequest.prototype.toString	= function() {
 		return '[' + "object" + ' ' + "XMLHttpRequest" + ']';
@@ -227,16 +245,16 @@
 	};
 
 	function fSynchronizeStates(oRequest) {
-				oRequest.readyState		= oRequest.object.readyState;
-		try {	oRequest.responseText	= oRequest.object.responseText;	} catch (e) {}
-		try {	oRequest.responseXML	= oRequest.object.responseXML;	} catch (e) {}
-		try {	oRequest.status			= oRequest.object.status;		} catch (e) {}
-		try {	oRequest.statusText		= oRequest.object.statusText;	} catch (e) {}
+				oRequest.readyState		= oRequest._object.readyState;
+		try {	oRequest.responseText	= oRequest._object.responseText;	} catch (e) {}
+		try {	oRequest.responseXML	= oRequest._object.responseXML;	} catch (e) {}
+		try {	oRequest.status			= oRequest._object.status;		} catch (e) {}
+		try {	oRequest.statusText		= oRequest._object.statusText;	} catch (e) {}
 	};
 
 	function fCleanTransport(oRequest) {
 		// BUGFIX: IE - memory leak
-		oRequest.object.onreadystatechange	= new window.Function;
+		oRequest._object.onreadystatechange	= new window.Function;
 
 		// Delete private properties
 		delete oRequest._cached;
