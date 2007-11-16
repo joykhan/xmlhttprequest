@@ -64,7 +64,6 @@
 		var oRequest	= this,
 			nState		= this.readyState;
 
-
 		// BUGFIX: IE - memory leak on page unload
 		if (bIE) {
 			var fOnUnload	= function() {
@@ -152,12 +151,12 @@
 
 					// Return now - wait untill re-sent request is finished
 					return;
-				}
+				};
 
 				// BUGFIX: Gecko - Annoying <parsererror /> in invalid XML responses
 				// BUGFIX: IE - Empty documents in invalid XML responses
 				if (oRequest.responseXML)
-					if (("parseError" in oRequest.responseXML && oRequest.responseXML.parseError != 0) || (oRequest.responseXML.documentElement && oRequest.responseXML.documentElement.tagName == "parsererror"))
+					if ((bIE && oRequest.responseXML.parseError != 0) || (oRequest.responseXML.documentElement && oRequest.responseXML.documentElement.tagName == "parsererror"))
 						oRequest.responseXML	= null;
 
 				// BUGFIX: IE - memory leak in interrupted
