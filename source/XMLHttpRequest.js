@@ -199,8 +199,13 @@
 
 			// Simulate missing states
 			this.readyState	= cXMLHttpRequest.OPEN;
-			while (++this.readyState < cXMLHttpRequest.DONE)
+			while (this.readyState < cXMLHttpRequest.DONE) {
+				this.readyState++;
 				fReadyStateChange(this);
+				// Check if we are aborted
+				if (this._aborted)
+					return;
+			}
 		}
 	};
 	cXMLHttpRequest.prototype.abort	= function() {
