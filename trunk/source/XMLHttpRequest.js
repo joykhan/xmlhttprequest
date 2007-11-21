@@ -19,8 +19,7 @@
 
 	// Define on browser type
 	var bGecko	= !!window.controllers,
-		bIE		= window.document.all && !window.navigator.userAgent.match(/opera/i),
-		bFireBug= bGecko && oXMLHttpRequest.wrapped;
+		bIE		= window.document.all && !window.navigator.userAgent.match(/opera/i);
 
 	// Constructor
 	function cXMLHttpRequest() {
@@ -28,7 +27,7 @@
 	};
 
 	// BUGFIX: Firefox with Firebug installed would break pages if not executed
-	if (bFireBug)
+	if (bGecko && oXMLHttpRequest.wrapped)
 		cXMLHttpRequest.wrapped	= oXMLHttpRequest.wrapped;
 
 	// Constants
@@ -75,6 +74,9 @@
 		}
 
 		this._object.onreadystatechange	= function() {
+			if (bGecko && !bAsync)
+				return;
+
 			// Synchronize states
 			fSynchronizeStates(oRequest);
 
@@ -164,13 +166,6 @@
 					window.detachEvent("onunload", fOnUnload);
 			}
 
-			// BUGFIX: Gecko - missing readystatechange calls in synchronous requests (this is executed when firebug is enabled)
-			if (!oRequest._async && bFireBug) {
-				oRequest.readyState	= cXMLHttpRequest.OPEN;
-				while (++oRequest.readyState < cXMLHttpRequest.DONE)
-					fReadyStateChange(oRequest);
-			}
-
 			// BUGFIX: Some browsers (Internet Explorer, Gecko) fire OPEN readystate twice
 			if (nState != oRequest.readyState)
 				fReadyStateChange(oRequest);
@@ -197,10 +192,16 @@
 
 		this._object.send(vData);
 
-		// BUGFIX: Gecko - missing readystatechange events
-		if (!this._async && !bFireBug)
-			while (this.readyState++ < cXMLHttpRequest.DONE)
+		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
+		if (bGecko && !this._async) {
+			// Synchronize states
+			fSynchronizeStates(this);
+
+			// Simulate missing states
+			this.readyState	= cXMLHttpRequest.OPEN;
+			while (++this.readyState < cXMLHttpRequest.DONE)
 				fReadyStateChange(this);
+		}
 	};
 	cXMLHttpRequest.prototype.abort	= function() {
 		// Add method sniffer
