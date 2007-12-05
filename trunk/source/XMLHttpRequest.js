@@ -19,6 +19,7 @@
 
 	// Define on browser type
 	var bGecko	= !!window.controllers,
+		bSafari	= window.navigator.vendor.match(/Apple/),
 		bIE		= window.document.all && !window.navigator.userAgent.match(/opera/i);
 
 	// Constructor
@@ -132,6 +133,12 @@
 									oRequest.responseXML	= oRequest._cached.responseXML;
 								}
 
+								// BUGFIX: IE - doesn't instantiate requestXML for application/some+xml responses
+								if (bIE && oRequest.responseXML && !oRequest.responseXML.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
+									oRequest.responseXML = new ActiveXObject('Microsoft.XMLDOM');
+									oRequest.responseXML.loadXML(oRequest.responseText);
+								}
+
 								// BUGFIX: IE - Empty documents in invalid XML responses
 								if (oRequest.responseXML)
 									if (oRequest.responseXML.parseError != 0)
@@ -154,6 +161,12 @@
 					// Return now - wait untill re-sent request is finished
 					return;
 				};
+
+				// BUGFIX: IE - doesn't instantiate requestXML for application/some+xml responses
+				if (bIE && oRequest.responseXML && !oRequest.responseXML.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
+					oRequest.responseXML = new ActiveXObject('Microsoft.XMLDOM');
+					oRequest.responseXML.loadXML(oRequest.responseText);
+				}
 
 				// BUGFIX: Gecko - Annoying <parsererror /> in invalid XML responses
 				// BUGFIX: IE - Empty documents in invalid XML responses
@@ -189,6 +202,13 @@
 		// Add method sniffer
 		if (cXMLHttpRequest.onsend)
 			cXMLHttpRequest.onsend.apply(this, arguments);
+
+		// BUGFIX: Safari 3 fails sending document created/modified dynamically, so an explicit serialization required
+		if (bSafari && vData && vData.nodeType == 9) {
+			vData	= new XMLSerializer().serializeToString(vData);
+			if (!this._headers["Content-Type"])
+				this._object.setRequestHeader("Content-Type", "application/xml");
+		}
 
 		this._object.send(vData);
 
