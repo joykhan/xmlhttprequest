@@ -203,8 +203,10 @@
 		if (cXMLHttpRequest.onsend)
 			cXMLHttpRequest.onsend.apply(this, arguments);
 
-		// BUGFIX: Safari 3 fails sending document created/modified dynamically, so an explicit serialization required
-		if (bSafari && vData && vData.nodeType == 9) {
+		// BUGFIX: Safari - fails sending documents created/modified dynamically, so an explicit serialization required
+		// BUGFIX: IE - rewrites any custom mime-type to "text/xml" in case an XMLNode is sent
+		// BUGFIX: Gecko - fails sending Element (this is up to the implementation either to standard)
+		if (vData && vData.nodeType) {
 			vData	= new XMLSerializer().serializeToString(vData);
 			if (!this._headers["Content-Type"])
 				this._object.setRequestHeader("Content-Type", "application/xml");
