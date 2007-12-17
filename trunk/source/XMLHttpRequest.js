@@ -19,8 +19,7 @@
 
 	// Define on browser type
 	var bGecko	= !!window.controllers,
-		bSafari	= window.navigator.vendor.match(/Apple/),
-		bIE		= window.document.all && !window.navigator.userAgent.match(/opera/i);
+		bIE		= window.document.all && !window.opera;
 
 	// Constructor
 	function cXMLHttpRequest() {
@@ -32,11 +31,11 @@
 		cXMLHttpRequest.wrapped	= oXMLHttpRequest.wrapped;
 
 	// Constants
-	cXMLHttpRequest.UNSENT	= 0;
-	cXMLHttpRequest.OPEN	= 1;
-	cXMLHttpRequest.SENT	= 2;
-	cXMLHttpRequest.LOADING	= 3;
-	cXMLHttpRequest.DONE	= 4;
+	cXMLHttpRequest.UNSENT				= 0;
+	cXMLHttpRequest.OPENED				= 1;
+	cXMLHttpRequest.HEADERS_RECEIVED	= 2;
+	cXMLHttpRequest.LOADING				= 3;
+	cXMLHttpRequest.DONE				= 4;
 
 	// Public Properties
 	cXMLHttpRequest.prototype.readyState	= cXMLHttpRequest.UNSENT;
@@ -64,7 +63,7 @@
 		var oRequest	= this,
 			nState		= this.readyState;
 
-		// BUGFIX: IE - memory leak on page unload
+		// BUGFIX: IE - memory leak on page unload (inter-page leak)
 		if (bIE) {
 			var fOnUnload	= function() {
 				if (oRequest._object.readyState != cXMLHttpRequest.DONE)
@@ -78,8 +77,11 @@
 			if (bGecko && !bAsync)
 				return;
 
-			// Synchronize states
-			fSynchronizeStates(oRequest);
+			// Synchronize state
+			oRequest.readyState		= oRequest._object.readyState;
+
+			//
+			fSynchronizeValues(oRequest);
 
 			// BUGFIX: Firefox fires unneccesary DONE when aborting
 			if (oRequest._aborted) {
@@ -93,7 +95,8 @@
 			if (oRequest.readyState == cXMLHttpRequest.DONE) {
 				//
 				fCleanTransport(oRequest);
-
+// Uncomment this block if you need a fix for IE cache
+/*
 				// BUGFIX: IE - cache issue
 				if (!oRequest._object.getResponseHeader("Date")) {
 					// Save object to cache
@@ -112,44 +115,33 @@
 								oRequest._object.setRequestHeader(sHeader, oRequest._headers[sHeader]);
 
 					oRequest._object.onreadystatechange	= function() {
-						// Synchronize states
-						fSynchronizeStates(oRequest);
+						// Synchronize state
+						oRequest.readyState		= oRequest._object.readyState;
+
+						if (oRequest._aborted) {
+							//
+							oRequest.readyState	= cXMLHttpRequest.UNSENT;
+
+							// Return
+							return;
+						}
 
 						if (oRequest.readyState == cXMLHttpRequest.DONE) {
-							if (oRequest._aborted) {
-								oRequest.readyState	= cXMLHttpRequest.UNSENT;
-
-								oRequest.responseText	= "";
-								oRequest.responseXML	= null;
-
-								// Return
-								return;
-							}
-							else {
-								//
-								if (oRequest.status == 304) {
-									// request = cached
-									oRequest.responseText	= oRequest._cached.responseText;
-									oRequest.responseXML	= oRequest._cached.responseXML;
-								}
-
-								// BUGFIX: IE - doesn't instantiate requestXML for application/some+xml responses
-								if (bIE && oRequest.responseXML && !oRequest.responseXML.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
-									oRequest.responseXML = new ActiveXObject('Microsoft.XMLDOM');
-									oRequest.responseXML.loadXML(oRequest.responseText);
-								}
-
-								// BUGFIX: IE - Empty documents in invalid XML responses
-								if (oRequest.responseXML)
-									if (oRequest.responseXML.parseError != 0)
-										oRequest.responseXML	= null;
-
-								//
-								fReadyStateChange(oRequest);
-							}
-
 							// Clean Object
 							fCleanTransport(oRequest);
+
+							// get cached request
+							if (oRequest.status == 304)
+								oRequest._object	= oRequest._cached;
+
+							//
+							delete oRequest._cached;
+
+							//
+							fSynchronizeValues(oRequest);
+
+							//
+							fReadyStateChange(oRequest);
 
 							// BUGFIX: IE - memory leak in interrupted
 							if (bIE && bAsync)
@@ -161,19 +153,7 @@
 					// Return now - wait untill re-sent request is finished
 					return;
 				};
-
-				// BUGFIX: IE - doesn't instantiate requestXML for application/some+xml responses
-				if (bIE && oRequest.responseXML && !oRequest.responseXML.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
-					oRequest.responseXML = new ActiveXObject('Microsoft.XMLDOM');
-					oRequest.responseXML.loadXML(oRequest.responseText);
-				}
-
-				// BUGFIX: Gecko - Annoying <parsererror /> in invalid XML responses
-				// BUGFIX: IE - Empty documents in invalid XML responses
-				if (oRequest.responseXML)
-					if ((bIE && oRequest.responseXML.parseError != 0) || (oRequest.responseXML.documentElement && oRequest.responseXML.documentElement.tagName == "parsererror"))
-						oRequest.responseXML	= null;
-
+*/
 				// BUGFIX: IE - memory leak in interrupted
 				if (bIE && bAsync)
 					window.detachEvent("onunload", fOnUnload);
@@ -193,7 +173,7 @@
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
 		if (!bAsync && bGecko) {
-			this.readyState	= cXMLHttpRequest.OPEN;
+			this.readyState	= cXMLHttpRequest.OPENED;
 
 			fReadyStateChange(this);
 		}
@@ -207,7 +187,7 @@
 		// BUGFIX: IE - rewrites any custom mime-type to "text/xml" in case an XMLNode is sent
 		// BUGFIX: Gecko - fails sending Element (this is up to the implementation either to standard)
 		if (vData && vData.nodeType) {
-			vData	= new XMLSerializer().serializeToString(vData);
+			vData	= window.XMLSerializer ? new window.XMLSerializer().serializeToString(vData) : vData.xml;
 			if (!this._headers["Content-Type"])
 				this._object.setRequestHeader("Content-Type", "application/xml");
 		}
@@ -216,11 +196,12 @@
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
 		if (bGecko && !this._async) {
-			// Synchronize states
-			fSynchronizeStates(this);
+			this.readyState	= cXMLHttpRequest.OPENED;
+
+			// Synchronize state
+			fSynchronizeValues(this);
 
 			// Simulate missing states
-			this.readyState	= cXMLHttpRequest.OPEN;
 			while (this.readyState < cXMLHttpRequest.DONE) {
 				this.readyState++;
 				fReadyStateChange(this);
@@ -276,20 +257,32 @@
 			cXMLHttpRequest.onreadystatechange.apply(oRequest);
 	};
 
-	function fSynchronizeStates(oRequest) {
-				oRequest.readyState		= oRequest._object.readyState;
+	function fGetDocument(oRequest) {
+		var oDocument	= oRequest.responseXML;
+		// Try parsing responseText
+		if (bIE && oDocument && !oDocument.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
+			oDocument	= new ActiveXObject('Microsoft.XMLDOM');
+			oDocument.loadXML(oRequest.responseText);
+		}
+		// Check if there is no error in document
+		if (oDocument)
+			if ((bIE && oDocument.parseError != 0) || (oDocument.documentElement && oDocument.documentElement.tagName == "parsererror"))
+				return null;
+		return oDocument;
+	};
+
+	function fSynchronizeValues(oRequest) {
 		try {	oRequest.responseText	= oRequest._object.responseText;	} catch (e) {}
-		try {	oRequest.responseXML	= oRequest._object.responseXML;	} catch (e) {}
-		try {	oRequest.status			= oRequest._object.status;		} catch (e) {}
-		try {	oRequest.statusText		= oRequest._object.statusText;	} catch (e) {}
+		try {	oRequest.responseXML	= fGetDocument(oRequest._object);	} catch (e) {}
+		try {	oRequest.status			= oRequest._object.status;			} catch (e) {}
+		try {	oRequest.statusText		= oRequest._object.statusText;		} catch (e) {}
 	};
 
 	function fCleanTransport(oRequest) {
-		// BUGFIX: IE - memory leak
+		// BUGFIX: IE - memory leak (on-page leak)
 		oRequest._object.onreadystatechange	= new window.Function;
 
 		// Delete private properties
-		delete oRequest._cached;
 		delete oRequest._headers;
 	};
 
