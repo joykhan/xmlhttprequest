@@ -24,6 +24,7 @@
 	// Constructor
 	function cXMLHttpRequest() {
 		this._object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject('Microsoft.XMLHTTP');
+		this._listeners	= [];
 	};
 
 	// BUGFIX: Firefox with Firebug installed would break pages if not executed
@@ -239,22 +240,71 @@
 
 		return this._object.setRequestHeader(sName, sValue);
 	};
+
+	// EventTarget interface implementation
+	cXMLHttpRequest.prototype.addEventListener	= function(sName, fHandler, bUseCapture) {
+		for (var nIndex = 0, oListener; oListener = this._listeners[nIndex]; nIndex++)
+			if (oListener[0] == sName && oListener[1] == fHandler && oListener[2] == bUseCapture)
+				return;
+		// Add listener
+		this._listeners.push([sName, fHandler, bUseCapture]);
+	};
+
+	cXMLHttpRequest.prototype.removeEventListener	= function(sName, fHandler, bUseCapture) {
+		for (var nIndex = 0, oListener; oListener = this._listeners[nIndex]; nIndex++)
+			if (oListener[0] == sName && oListener[1] == fHandler && oListener[2] == bUseCapture)
+				break;
+		// Remove listener
+		if (oListener)
+			this._listeners.splice(nIndex, 1);
+	};
+
+	cXMLHttpRequest.prototype.dispatchEvent	= function(oEvent) {
+		var oEvent	= {
+			'type':			oEvent.type,
+			'target':		this,
+			'currentTarget':this,
+			'eventPhase':	2,
+			'bubbles':		oEvent.bubbles,
+			'cancelable':	oEvent.cancelable,
+			'timeStamp':	oEvent.timeStamp,
+			'stopPropagation':	function() {},	// There is no flow
+			'preventDefault':	function() {},	// There is no default action
+			'initEvent':		function() {}	// Original event object should be inited
+		};
+
+		// Execute onreadystatechange
+		if (oEvent.type == "readystatechange" && this.onreadystatechange)
+			(this.onreadystatechange.handleEvent || this.onreadystatechange).apply(this, [oEvent]);
+
+		// Execute listeners
+		for (var nIndex = 0, oListener; oListener = this._listeners[nIndex]; nIndex++)
+			if (oListener[0] == oEvent.type && !oListener[2])
+				(oListener[1].handleEvent || oListener[1]).apply(this, [oEvent]);
+	};
+
+	//
 	cXMLHttpRequest.prototype.toString	= function() {
 		return '[' + "object" + ' ' + "XMLHttpRequest" + ']';
 	};
+
 	cXMLHttpRequest.toString	= function() {
 		return '[' + "XMLHttpRequest" + ']';
 	};
 
 	// Helper function
 	function fReadyStateChange(oRequest) {
-		// Execute onreadystatechange
-		if (oRequest.onreadystatechange)
-			oRequest.onreadystatechange.apply(oRequest);
-
 		// Sniffing code
 		if (cXMLHttpRequest.onreadystatechange)
 			cXMLHttpRequest.onreadystatechange.apply(oRequest);
+
+		// Fake event
+		oRequest.dispatchEvent({
+			'type':			'readystatechange',
+			'bubbles':		false,
+			'cancelable':	false,
+			'timeStamp':	new Date + 0
+		});
 	};
 
 	function fGetDocument(oRequest) {
