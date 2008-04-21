@@ -67,8 +67,11 @@
 		// BUGFIX: IE - memory leak on page unload (inter-page leak)
 		if (bIE) {
 			var fOnUnload	= function() {
-				if (oRequest._object.readyState != cXMLHttpRequest.DONE)
+				if (oRequest._object.readyState != cXMLHttpRequest.DONE) {
 					fCleanTransport(oRequest);
+					// Safe to abort here since onreadystatechange handler removed
+					oRequest.abort();
+				}
 			};
 			if (bAsync)
 				window.attachEvent("onunload", fOnUnload);
