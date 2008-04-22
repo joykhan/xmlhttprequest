@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 (function () {
 
 	// Save reference to earlier defined object implementation (if any)
@@ -23,7 +24,7 @@
 
 	// Constructor
 	function cXMLHttpRequest() {
-		this._object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject('Microsoft.XMLHTTP');
+		this._object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject("Microsoft.XMLHTTP");
 		this._listeners	= [];
 	};
 
@@ -56,6 +57,10 @@
 
 	// Public Methods
 	cXMLHttpRequest.prototype.open	= function(sMethod, sUrl, bAsync, sUser, sPassword) {
+
+		// When bAsync parameter value is ommited, use true as default
+		if (arguments.length < 3)
+			bAsync	= true;
 
 		// Save async parameter for fixing Gecko bug with missing readystatechange in synchronous requests
 		this._async		= bAsync;
@@ -303,7 +308,7 @@
 
 		// Fake event
 		oRequest.dispatchEvent({
-			'type':			'readystatechange',
+			'type':			"readystatechange",
 			'bubbles':		false,
 			'cancelable':	false,
 			'timeStamp':	new Date + 0
@@ -314,7 +319,7 @@
 		var oDocument	= oRequest.responseXML;
 		// Try parsing responseText
 		if (bIE && oDocument && !oDocument.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
-			oDocument	= new ActiveXObject('Microsoft.XMLDOM');
+			oDocument	= new window.ActiveXObject("Microsoft.XMLDOM");
 			oDocument.loadXML(oRequest.responseText);
 		}
 		// Check if there is no error in document
