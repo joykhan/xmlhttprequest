@@ -1,18 +1,18 @@
-// Copyright 2007 Sergey Ilinsky (http://www.ilinsky.com)
+// XMLHttpRequest.js Copyright (C) 2008 Sergey Ilinsky (http://www.ilinsky.com)
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
+// This work is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation; either version 2.1 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// This work is distributed in the hope that it will be useful,
+// but without any warranty; without even the implied warranty of
+// merchantability or fitness for a particular purpose. See the
+// GNU Lesser General Public License for more details.
 
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+// You should have received a copy of the GNU Lesser General Public License
+// along with this library; if not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 (function () {
 
@@ -179,7 +179,13 @@
 		if (cXMLHttpRequest.onopen)
 			cXMLHttpRequest.onopen.apply(this, arguments);
 
-		this._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+		if (arguments.length > 4)
+			this._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+		else
+		if (arguments.length > 3)
+			this._object.open(sMethod, sUrl, bAsync, sUser);
+		else
+			this._object.open(sMethod, sUrl, bAsync);
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
 		if (!bAsync && bGecko) {
