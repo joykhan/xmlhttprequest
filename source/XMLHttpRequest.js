@@ -42,10 +42,10 @@
 
 	// Public Properties
 	cXMLHttpRequest.prototype.readyState	= cXMLHttpRequest.UNSENT;
-	cXMLHttpRequest.prototype.responseText	= "";
+	cXMLHttpRequest.prototype.responseText	= '';
 	cXMLHttpRequest.prototype.responseXML	= null;
 	cXMLHttpRequest.prototype.status		= 0;
-	cXMLHttpRequest.prototype.statusText	= "";
+	cXMLHttpRequest.prototype.statusText	= '';
 
 	// Instance-level Events Handlers
 	cXMLHttpRequest.prototype.onreadystatechange	= null;
