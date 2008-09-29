@@ -68,19 +68,19 @@
 
 		// Set the onreadystatechange handler
 		var oRequest	= this,
-			nState		= this.readyState;
+			nState		= this.readyState,
+			fOnUnload;
 
 		// BUGFIX: IE - memory leak on page unload (inter-page leak)
-		if (bIE) {
-			var fOnUnload	= function() {
+		if (bIE && bAsync) {
+			fOnUnload = function() {
 				if (oRequest._object.readyState != cXMLHttpRequest.DONE) {
 					fCleanTransport(oRequest);
 					// Safe to abort here since onreadystatechange handler removed
 					oRequest.abort();
 				}
 			};
-			if (bAsync)
-				window.attachEvent("onunload", fOnUnload);
+			window.attachEvent("onunload", fOnUnload);
 		}
 
 		this._object.onreadystatechange	= function() {
@@ -331,7 +331,7 @@
 		}
 		// Check if there is no error in document
 		if (oDocument)
-			if ((bIE && oDocument.parseError != 0) || (oDocument.documentElement && oDocument.documentElement.tagName == "parsererror"))
+			if ((bIE && oDocument.parseError != 0) || !oDocument.documentElement || (oDocument.documentElement && oDocument.documentElement.tagName == "parsererror"))
 				return null;
 		return oDocument;
 	};
