@@ -76,13 +76,30 @@
 		// BUGFIX: IE - memory leak on page unload (inter-page leak)
 		if (bIE && bAsync) {
 			fOnUnload = function() {
-				if (oRequest._object.readyState != cXMLHttpRequest.DONE) {
+				if (nState != cXMLHttpRequest.DONE) {
 					fCleanTransport(oRequest);
 					// Safe to abort here since onreadystatechange handler removed
 					oRequest.abort();
 				}
 			};
 			window.attachEvent("onunload", fOnUnload);
+		}
+
+		// Add method sniffer
+		if (cXMLHttpRequest.onopen)
+			cXMLHttpRequest.onopen.apply(this, arguments);
+
+		if (arguments.length > 4)
+			this._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+		else
+		if (arguments.length > 3)
+			this._object.open(sMethod, sUrl, bAsync, sUser);
+		else
+			this._object.open(sMethod, sUrl, bAsync);
+
+		if (!bGecko && !bIE) {
+			this.readyState	= cXMLHttpRequest.OPENED;
+			fReadyStateChange(this);
 		}
 
 		this._object.onreadystatechange	= function() {
@@ -183,26 +200,7 @@
 				fReadyStateChange(oRequest);
 
 			nState	= oRequest.readyState;
-		};
-		// Add method sniffer
-		if (cXMLHttpRequest.onopen)
-			cXMLHttpRequest.onopen.apply(this, arguments);
-
-		if (arguments.length > 4)
-			this._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
-		else
-		if (arguments.length > 3)
-			this._object.open(sMethod, sUrl, bAsync, sUser);
-		else
-			this._object.open(sMethod, sUrl, bAsync);
-
-		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
-		if (!bAsync && bGecko) {
-			this.readyState	= cXMLHttpRequest.OPENED;
-
-			fReadyStateChange(this);
-		}
-	};
+		};	};
 	cXMLHttpRequest.prototype.send	= function(vData) {
 		// Add method sniffer
 		if (cXMLHttpRequest.onsend)
