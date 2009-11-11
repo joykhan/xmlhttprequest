@@ -58,8 +58,10 @@
 
 	// Public Methods
 	cXMLHttpRequest.prototype.open	= function(sMethod, sUrl, bAsync, sUser, sPassword) {
+		// Delete headers, required when object is reused
+		delete this._headers;
 
-		// When bAsync parameter value is ommited, use true as default
+		// When bAsync parameter value is omitted, use true as default
 		if (arguments.length < 3)
 			bAsync	= true;
 
@@ -93,7 +95,7 @@
 			//
 			fSynchronizeValues(oRequest);
 
-			// BUGFIX: Firefox fires unneccesary DONE when aborting
+			// BUGFIX: Firefox fires unnecessary DONE when aborting
 			if (oRequest._aborted) {
 				// Reset readyState to UNSENT
 				oRequest.readyState	= cXMLHttpRequest.UNSENT;
@@ -116,7 +118,14 @@
 					cXMLHttpRequest.call(oRequest);
 
 					// Re-send request
-					oRequest._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+					if (sUser) {
+					 	if (sPassword)
+							oRequest._object.open(sMethod, sUrl, bAsync, sUser, sPassword);
+						else
+							oRequest._object.open(sMethod, sUrl, bAsync, sUser);
+					}
+					else
+						oRequest._object.open(sMethod, sUrl, bAsync);
 					oRequest._object.setRequestHeader("If-Modified-Since", oRequest._cached.getResponseHeader("Last-Modified") || new window.Date(0));
 					// Copy headers set
 					if (oRequest._headers)
@@ -160,7 +169,7 @@
 					};
 					oRequest._object.send(null);
 
-					// Return now - wait untill re-sent request is finished
+					// Return now - wait until re-sent request is finished
 					return;
 				};
 */
@@ -232,7 +241,7 @@
 		if (cXMLHttpRequest.onabort)
 			cXMLHttpRequest.onabort.apply(this, arguments);
 
-		// BUGFIX: Gecko - unneccesary DONE when aborting
+		// BUGFIX: Gecko - unnecessary DONE when aborting
 		if (this.readyState > cXMLHttpRequest.UNSENT)
 			this._aborted	= true;
 
@@ -285,7 +294,7 @@
 			'timeStamp':	oEvent.timeStamp,
 			'stopPropagation':	function() {},	// There is no flow
 			'preventDefault':	function() {},	// There is no default action
-			'initEvent':		function() {}	// Original event object should be inited
+			'initEvent':		function() {}	// Original event object should be initialized
 		};
 
 		// Execute onreadystatechange
@@ -323,11 +332,14 @@
 	};
 
 	function fGetDocument(oRequest) {
-		var oDocument	= oRequest.responseXML;
+		var oDocument	= oRequest.responseXML,
+			sResponse	= oRequest.responseText;
 		// Try parsing responseText
-		if (bIE && oDocument && !oDocument.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
+		if (bIE && sResponse && oDocument && !oDocument.documentElement && oRequest.getResponseHeader("Content-Type").match(/[^\/]+\/[^\+]+\+xml/)) {
 			oDocument	= new window.ActiveXObject("Microsoft.XMLDOM");
-			oDocument.loadXML(oRequest.responseText);
+			oDocument.async				= false;
+			oDocument.validateOnParse	= false;
+			oDocument.loadXML(sResponse);
 		}
 		// Check if there is no error in document
 		if (oDocument)
@@ -346,9 +358,6 @@
 	function fCleanTransport(oRequest) {
 		// BUGFIX: IE - memory leak (on-page leak)
 		oRequest._object.onreadystatechange	= new window.Function;
-
-		// Delete private properties
-		delete oRequest._headers;
 	};
 
 	// Internet Explorer 5.0 (missing apply)
