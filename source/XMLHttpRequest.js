@@ -282,7 +282,7 @@
 	};
 
 	cXMLHttpRequest.prototype.dispatchEvent	= function(oEvent) {
-		var oEvent	= {
+		var oEventPseudo	= {
 			'type':			oEvent.type,
 			'target':		this,
 			'currentTarget':this,
@@ -296,13 +296,13 @@
 		};
 
 		// Execute onreadystatechange
-		if (oEvent.type == "readystatechange" && this.onreadystatechange)
-			(this.onreadystatechange.handleEvent || this.onreadystatechange).apply(this, [oEvent]);
+		if (oEventPseudo.type == "readystatechange" && this.onreadystatechange)
+			(this.onreadystatechange.handleEvent || this.onreadystatechange).apply(this, [oEventPseudo]);
 
 		// Execute listeners
 		for (var nIndex = 0, oListener; oListener = this._listeners[nIndex]; nIndex++)
-			if (oListener[0] == oEvent.type && !oListener[2])
-				(oListener[1].handleEvent || oListener[1]).apply(this, [oEvent]);
+			if (oListener[0] == oEventPseudo.type && !oListener[2])
+				(oListener[1].handleEvent || oListener[1]).apply(this, [oEventPseudo]);
 	};
 
 	//
