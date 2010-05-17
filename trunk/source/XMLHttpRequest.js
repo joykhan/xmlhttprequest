@@ -21,11 +21,12 @@
 
 	// Define on browser type
 	var bGecko	= !!window.controllers,
-		bIE		= window.document.all && !window.opera;
+		bIE		= window.document.all && !window.opera,
+		bIE7	= bIE && window.navigator.userAgent.match(/MSIE ([\.0-9]+)/) && RegExp.$1 == 7;
 
 	// Constructor
 	function cXMLHttpRequest() {
-		this._object	= oXMLHttpRequest ? new oXMLHttpRequest : new window.ActiveXObject("Microsoft.XMLHTTP");
+		this._object	= oXMLHttpRequest && !bIE7 ? new oXMLHttpRequest : new window.ActiveXObject("Microsoft.XMLHTTP");
 		this._listeners	= [];
 	};
 
