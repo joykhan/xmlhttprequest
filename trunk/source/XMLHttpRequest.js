@@ -201,7 +201,8 @@
 				fReadyStateChange(oRequest);
 
 			nState	= oRequest.readyState;
-		};	};
+		}
+	};
 	cXMLHttpRequest.prototype.send	= function(vData) {
 		// Add method sniffer
 		if (cXMLHttpRequest.onsend)
