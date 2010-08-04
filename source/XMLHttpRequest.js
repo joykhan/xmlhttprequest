@@ -54,6 +54,9 @@
 	cXMLHttpRequest.prototype.status		= 0;
 	cXMLHttpRequest.prototype.statusText	= '';
 
+	// Priority proposal
+	cXMLHttpRequest.prototype.priority		= "NORMAL";
+
 	// Instance-level Events Handlers
 	cXMLHttpRequest.prototype.onreadystatechange	= null;
 
@@ -129,6 +132,9 @@
 			}
 
 			if (oRequest.readyState == cXMLHttpRequest.DONE) {
+				// Free up queue
+				if (bAsync)
+					fQueue_remove(oRequest);
 				//
 				fCleanTransport(oRequest);
 // Uncomment this block if you need a fix for IE cache
@@ -209,38 +215,51 @@
 			nState	= oRequest.readyState;
 		}
 	};
+	function fXMLHttpRequest_send(oRequest) {
+		oRequest._object.send(oRequest._data);
+		delete oRequest._data;
+
+		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
+		if (bGecko && !oRequest._async) {
+			oRequest.readyState	= cXMLHttpRequest.OPENED;
+
+			// Synchronize state
+			fSynchronizeValues(oRequest);
+
+			// Simulate missing states
+			while (oRequest.readyState < cXMLHttpRequest.DONE) {
+				oRequest.readyState++;
+				fReadyStateChange(oRequest);
+				// Check if we are aborted
+				if (oRequest._aborted)
+					return;
+			}
+		}
+	};
 	cXMLHttpRequest.prototype.send	= function(vData) {
 		// Add method sniffer
 		if (cXMLHttpRequest.onsend)
 			cXMLHttpRequest.onsend.apply(this, arguments);
+
+		if (!arguments.length)
+			vData	= null;
 
 		// BUGFIX: Safari - fails sending documents created/modified dynamically, so an explicit serialization required
 		// BUGFIX: IE - rewrites any custom mime-type to "text/xml" in case an XMLNode is sent
 		// BUGFIX: Gecko - fails sending Element (this is up to the implementation either to standard)
 		if (vData && vData.nodeType) {
 			vData	= window.XMLSerializer ? new window.XMLSerializer().serializeToString(vData) : vData.xml;
-			if (!this._headers["Content-Type"])
-				this._object.setRequestHeader("Content-Type", "application/xml");
+			if (!oRequest._headers["Content-Type"])
+				oRequest._object.setRequestHeader("Content-Type", "application/xml");
 		}
 
-		this._object.send(vData);
+		this._data	= vData;
 
-		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
-		if (bGecko && !this._async) {
-			this.readyState	= cXMLHttpRequest.OPENED;
-
-			// Synchronize state
-			fSynchronizeValues(this);
-
-			// Simulate missing states
-			while (this.readyState < cXMLHttpRequest.DONE) {
-				this.readyState++;
-				fReadyStateChange(this);
-				// Check if we are aborted
-				if (this._aborted)
-					return;
-			}
-		}
+		// Add to queue
+		if (this._async)
+			fQueue_add(this);
+		else
+			fXMLHttpRequest_send(this);
 	};
 	cXMLHttpRequest.prototype.abort	= function() {
 		// Add method sniffer
@@ -255,6 +274,10 @@
 
 		// BUGFIX: IE - memory leak
 		fCleanTransport(this);
+
+		delete this._data;
+		if (this._async)
+			fQueue_remove(this);
 	};
 	cXMLHttpRequest.prototype.getAllResponseHeaders	= function() {
 		return this._object.getAllResponseHeaders();
@@ -364,6 +387,44 @@
 	function fCleanTransport(oRequest) {
 		// BUGFIX: IE - memory leak (on-page leak)
 		oRequest._object.onreadystatechange	= new window.Function;
+	};
+
+	// Queue manager
+	var oQueuePending	= {"CRITICAL":[],"HIGH":[],"NORMAL":[],"LOW":[],"LOWEST":[]},
+		aQueueRunning	= [];
+	function fQueue_add(oRequest) {
+		oQueuePending[oRequest.priority in oQueuePending ? oRequest.priority : "NORMAL"].push(oRequest);
+		//
+		setTimeout(fQueue_process);
+	};
+
+	function fQueue_remove(oRequest) {
+		for (var nIndex = 0, bFound	= false; nIndex < aQueueRunning.length; nIndex++)
+			if (bFound)
+				aQueueRunning[nIndex - 1]	= aQueueRunning[nIndex];
+			else
+			if (aQueueRunning[nIndex] == oRequest)
+				bFound	= true;
+		if (bFound)
+			aQueueRunning.length--;
+		//
+		setTimeout(fQueue_process);
+	};
+
+	function fQueue_process() {
+		if (aQueueRunning.length < 6) {
+			for (var sPriority in oQueuePending) {
+				if (oQueuePending[sPriority].length) {
+					var oRequest	= oQueuePending[sPriority][0];
+					oQueuePending[sPriority]	= oQueuePending[sPriority].slice(1);
+					//
+					aQueueRunning.push(oRequest);
+					// Send request
+					fXMLHttpRequest_send(oRequest);
+					break;
+				}
+			}
+		}
 	};
 
 	// Internet Explorer 5.0 (missing apply)
