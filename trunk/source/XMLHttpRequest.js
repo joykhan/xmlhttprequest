@@ -22,7 +22,7 @@
 	// Define on browser type
 	var bGecko	= !!window.controllers,
 		bIE		= window.document.all && !window.opera,
-		bIE7	= bIE && window.navigator.userAgent.match(/MSIE ([\.0-9]+)/) && RegExp.$1 == 7;
+		bIE7	= bIE && window.navigator.userAgent.match(/MSIE 7.0/);
 
 	// Enables "XMLHttpRequest()" call next to "new XMLHttpReques()"
 	function fXMLHttpRequest() {
