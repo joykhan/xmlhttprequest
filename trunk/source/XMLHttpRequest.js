@@ -133,6 +133,7 @@
 
 			if (oRequest.readyState == cXMLHttpRequest.DONE) {
 				// Free up queue
+				delete oRequest._data;
 				if (bAsync)
 					fQueue_remove(oRequest);
 				//
@@ -217,7 +218,6 @@
 	};
 	function fXMLHttpRequest_send(oRequest) {
 		oRequest._object.send(oRequest._data);
-		delete oRequest._data;
 
 		// BUGFIX: Gecko - missing readystatechange calls in synchronous requests
 		if (bGecko && !oRequest._async) {
