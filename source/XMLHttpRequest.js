@@ -107,10 +107,8 @@
 		else
 			this._object.open(sMethod, sUrl, bAsync);
 
-		if (!bGecko && !bIE) {
-			this.readyState	= cXMLHttpRequest.OPENED;
-			fReadyStateChange(this);
-		}
+		this.readyState	= cXMLHttpRequest.OPENED;
+		fReadyStateChange(this);
 
 		this._object.onreadystatechange	= function() {
 			if (bGecko && !bAsync)
@@ -274,6 +272,8 @@
 
 		// BUGFIX: IE - memory leak
 		fCleanTransport(this);
+
+		this.readyState	= cXMLHttpRequest.UNSENT;
 
 		delete this._data;
 		if (this._async)
