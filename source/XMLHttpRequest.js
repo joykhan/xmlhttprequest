@@ -132,8 +132,8 @@
 			if (oRequest.readyState == cXMLHttpRequest.DONE) {
 				// Free up queue
 				delete oRequest._data;
-				if (bAsync)
-					fQueue_remove(oRequest);
+/*				if (bAsync)
+					fQueue_remove(oRequest);*/
 				//
 				fCleanTransport(oRequest);
 // Uncomment this block if you need a fix for IE cache
@@ -252,11 +252,11 @@
 		}
 
 		this._data	= vData;
-
+/*
 		// Add to queue
 		if (this._async)
 			fQueue_add(this);
-		else
+		else*/
 			fXMLHttpRequest_send(this);
 	};
 	cXMLHttpRequest.prototype.abort	= function() {
@@ -276,8 +276,8 @@
 		this.readyState	= cXMLHttpRequest.UNSENT;
 
 		delete this._data;
-		if (this._async)
-			fQueue_remove(this);
+/*		if (this._async)
+			fQueue_remove(this);*/
 	};
 	cXMLHttpRequest.prototype.getAllResponseHeaders	= function() {
 		return this._object.getAllResponseHeaders();
@@ -388,7 +388,7 @@
 		// BUGFIX: IE - memory leak (on-page leak)
 		oRequest._object.onreadystatechange	= new window.Function;
 	};
-
+/*
 	// Queue manager
 	var oQueuePending	= {"CRITICAL":[],"HIGH":[],"NORMAL":[],"LOW":[],"LOWEST":[]},
 		aQueueRunning	= [];
@@ -426,7 +426,7 @@
 			}
 		}
 	};
-
+*/
 	// Internet Explorer 5.0 (missing apply)
 	if (!window.Function.prototype.apply) {
 		window.Function.prototype.apply	= function(oRequest, oArguments) {
